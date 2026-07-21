@@ -4,7 +4,7 @@
 
 # ✈️ VistaVoyage
 
-### *Your World. Your Way..*
+### *Your World. Your Way.*
 
 **AI-Powered Travel Discovery Mobile Application**
 
@@ -29,6 +29,7 @@
 [🛠️ Tech Stack](#️-tech-stack) &nbsp;•&nbsp;
 [🚀 Getting Started](#-getting-started) &nbsp;•&nbsp;
 [📁 Structure](#-project-structure) &nbsp;•&nbsp;
+[📋 Submission](#-semester-project-submission) &nbsp;•&nbsp;
 [👥 Team](#-team)
 
 </div>
@@ -47,6 +48,8 @@ The entire app runs on **free-tier services** — no billing, no credit card —
 - 📴 **Offline-First** — 10 destinations load instantly without internet
 - 🤖 **Actually Smart AI** — Real Llama 3.3 70B responses, not templates
 - 💅 **Production UI** — Glass morphism, hero animations, travel photography
+- 🔔 **Push Notifications** — Local notifications with permission handling
+- ⚙️ **Full Settings** — Settings menu + dedicated settings screen
 - ⚡ **Zero Cost** — Supabase Free + Groq Free = $0/month forever
 
 ---
@@ -62,6 +65,7 @@ The entire app runs on **free-tier services** — no billing, no credit card —
 - Powered by Supabase Auth
 - Auto-login — session persists across launches
 - Personalized greeting with username
+- Error banners for invalid credentials
 
 ### 🌍 Destinations
 - 10 curated global destinations
@@ -85,6 +89,13 @@ The entire app runs on **free-tier services** — no billing, no credit card —
 - Animated typing indicator
 - 6 quick-prompt chips
 
+### ⚙️ Settings & Notifications
+- Slide-up settings menu from home AppBar
+- Dedicated settings screen with toggle switches
+- Push notification permissions & test trigger
+- Dark mode toggle, notification preferences
+- Secure Supabase logout
+
 ### 📱 UI / UX
 - Travel photo backgrounds on auth screens
 - Glass morphism input fields
@@ -106,20 +117,21 @@ The entire app runs on **free-tier services** — no billing, no credit card —
 
 | Splash | Login | Sign Up |
 |:---:|:---:|:---:|
-| <img src="screenshots/splash.login.jpeg" width="220"/> | <img src="screenshots/login.jpeg" width="220"/> | <img src="screenshots/signup.jpeg" width="220"/> |
-| *Full photo background + animation* | *Glass inputs + Supabase auth* | *Separate amber-themed screen* |
+| *Splash screen* | *Glass inputs + Supabase auth* | *Separate amber-themed screen* |
 
 ### App Screens
 
 | Home | Detail |
 |:---:|:---:|
-| <img src="screenshots/Home.jpeg" width="220"/> | <img src="screenshots/Detail.jpeg" width="220"/> |
 | *Live search + 10 destination cards* | *Hero image + highlights + AI button* |
 
 | Favorites | AI Chat |
 |:---:|:---:|
-| <img src="screenshots/favourite.jpeg" width="220"/> | <img src="screenshots/ai.jpeg" width="220"/> |
 | *Swipe to delete + cloud sync* | *Llama 3.3 itinerary + quick prompts* |
+
+| Settings Menu | Settings Screen | Notifications |
+|:---:|:---:|:---:|
+| *Slide-up bottom sheet* | *Toggles + preferences* | *Push notification setup* |
 
 </div>
 
@@ -137,6 +149,8 @@ The entire app runs on **free-tier services** — no billing, no credit card —
 | 🗄️ **Database** | Supabase PostgreSQL | — | Favorites with Row Level Security |
 | 🤖 **AI Model** | Groq — Llama 3.3 70B | — | Travel itinerary generation |
 | 🌐 **HTTP** | Dart `http` package | 1.2.1 | Direct Groq API calls |
+| 🔔 **Notifications** | flutter_local_notifications | 17.x | Local push notifications |
+| 🔑 **Permissions** | permission_handler | 11.x | Runtime permission requests |
 | 🎨 **Design** | Material Design 3 | — | UI components and theming |
 | 🔤 **Fonts** | Playfair Display + Nunito | — | Title + body typography |
 
@@ -183,21 +197,21 @@ Also create free accounts at:
 ### Step 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/QaswarSarfrazcodes/VistaVoyage-Semester-Project.git
-cd VistaVoyage-Semester-Project
+git clone https://github.com/QaswarSarfrazcodes/Vista-Voyage-.git
+cd Vista-Voyage-
 ```
 
 ---
 
-### Step 2 — Add Image Assets
+### Step 2 — Image Assets
 
-Place all images in `assets/images/`:
+All images are included in `assets/images/`:
 
 ```
 assets/images/
-├── splash.jpg              ← Dramatic travel photo (1080×1920)
-├── login_bg.jpg            ← Scenic landscape (1080×1920)
-├── signup_bg.jpg           ← Adventure photo (1080×1920)
+├── splash.jpg              ← Dramatic travel photo
+├── login_bg.jpg            ← Scenic landscape
+├── signup_bg.jpg           ← Adventure photo
 ├── logo.png                ← App logo (512×512)
 ├── placeholder.png         ← Fallback image
 ├── empty_favorites.png     ← Empty state illustration
@@ -213,94 +227,40 @@ assets/images/
 └── dest_istanbul.jpg
 ```
 
-> 💡 **Free sources:** [Unsplash](https://unsplash.com) · [Pexels](https://pexels.com)
-
 ---
 
-### Step 3 — Add Fonts
-
-Download and place in `assets/fonts/`:
-
-```
-assets/fonts/
-├── PlayfairDisplay-Bold.ttf   ← fonts.google.com/specimen/Playfair+Display
-├── Nunito-Regular.ttf          ← fonts.google.com/specimen/Nunito (weight 400)
-├── Nunito-SemiBold.ttf         ← same (weight 600)
-└── Nunito-Bold.ttf             ← same (weight 700)
-```
-
----
-
-### Step 4 — Supabase Setup
+### Step 3 — Supabase Setup
 
 **a)** Create a free project at [supabase.com](https://supabase.com)
 
-**b)** Go to **SQL Editor → New Query**, paste and run:
+**b)** Go to **SQL Editor → New Query**, paste and run the SQL from `supabase_setup.sql`
 
-```sql
--- destinations table
-create table if not exists public.destinations (
-  id          text primary key,
-  name        text not null,
-  country     text not null,
-  "imageUrl"  text not null,
-  "isAsset"   boolean default false,
-  description text not null,
-  rating      numeric(3,1) not null,
-  tags        jsonb default '[]',
-  highlights  jsonb default '[]',
-  "bestTime"  text default '',
-  "avgBudget" text default ''
-);
+**c)** Create a `.env` file in the project root:
 
--- favorites table
-create table if not exists public.favorites (
-  id         uuid primary key default gen_random_uuid(),
-  user_id    uuid references auth.users(id) on delete cascade not null,
-  dest_id    text not null,
-  dest_data  jsonb not null,
-  created_at timestamptz default now(),
-  unique(user_id, dest_id)
-);
-
--- Row Level Security
-alter table public.destinations enable row level security;
-create policy "Authenticated read destinations"
-  on public.destinations for select
-  using (auth.role() = 'authenticated');
-
-alter table public.favorites enable row level security;
-create policy "Users manage own favorites"
-  on public.favorites for all
-  using (auth.uid() = user_id);
 ```
-
-**c)** Update credentials in `lib/services/supabase_service.dart`:
-
-```dart
-static const _url     = 'https://YOUR_PROJECT_ID.supabase.co';
-static const _anonKey = 'YOUR_ANON_PUBLIC_KEY';
+SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+SUPABASE_ANON_KEY=YOUR_ANON_PUBLIC_KEY
 ```
 
 ---
 
-### Step 5 — Groq API Key
+### Step 4 — Groq API Key
 
 **a)** Sign up free at [console.groq.com](https://console.groq.com)
 
 **b)** Go to **API Keys → Create API Key**
 
-**c)** Add your key in `lib/services/ai_service.dart`:
+**c)** Add your key to `.env`:
 
-```dart
-static const _apiKey = 'gsk_YOUR_KEY_HERE';
+```
+GROQ_API_KEY=gsk_YOUR_KEY_HERE
 ```
 
 > ✅ Free forever · No credit card · 30 requests/minute
 
 ---
 
-### Step 6 — Run the App
+### Step 5 — Run the App
 
 ```bash
 # Install all dependencies
@@ -318,11 +278,11 @@ flutter build apk --release
 ## 📁 Project Structure
 
 ```
-vistavoyage/
+Vista-Voyage-/
 │
 ├── 📁 assets/
 │   ├── 📁 fonts/                          # Playfair Display + Nunito
-│   └── 📁 images/                         # 13 image assets
+│   └── 📁 images/                         # 17 image assets
 │
 ├── 📁 lib/
 │   ├── 📄 main.dart                       # Entry point + routing + theme
@@ -332,27 +292,38 @@ vistavoyage/
 │   │   ├── splash_screen.dart             # Launch + auth check
 │   │   ├── login_screen.dart              # Sign In
 │   │   ├── signup_screen.dart             # Create Account
-│   │   ├── home_screen.dart               # Main feed + search
-│   │   ├── detail_screen.dart             # Destination detail
-│   │   ├── favorites_screen.dart          # Saved destinations
-│   │   └── ai_screen.dart                 # Groq AI chat
+│   │   ├── home_screen.dart               # Main feed + search + settings icon
+│   │   ├── detail_screen.dart             # Destination detail + AI button
+│   │   ├── favorites_screen.dart          # Saved destinations (Supabase)
+│   │   ├── ai_screen.dart                 # Groq AI itinerary chat
+│   │   ├── settings_menu.dart             # Slide-up bottom sheet menu
+│   │   ├── settings_screen.dart           # Full settings with toggles
+│   │   ├── notifications_screen.dart      # Push notification management
+│   │   ├── profile_screen.dart            # User profile
+│   │   ├── map_screen.dart                # Destination map view
+│   │   └── support_screen.dart            # Help & support
 │   ├── 📁 services/
 │   │   ├── supabase_service.dart          # Auth wrapper
-│   │   ├── supabase_data_service.dart     # CRUD + seed data
-│   │   └── ai_service.dart                # Groq API client
+│   │   ├── supabase_data_service.dart     # CRUD + seed data + favorites
+│   │   ├── ai_service.dart                # Groq API client
+│   │   └── notification_service.dart      # Local push notifications
+│   ├── 📁 theme/
+│   │   └── app_colors.dart                # Color palette
 │   └── 📁 widgets/
-│       └── destination_card.dart          # Reusable card
+│       └── destination_card.dart          # Reusable destination card
 │
-├── 📁 screenshots/                        # App screenshots
+├── 📁 screenshots/                        # Architecture & workflow diagrams
 ├── 📁 test/
 │   └── widget_test.dart
-├── 📄 supabase_setup.sql                  # DB schema + RLS
+├── 📄 supabase_setup.sql                  # DB schema + RLS policies
+├── 📄 user_stories.md                     # 9 User Stories (Task 2)
+├── 📄 PROJECT_VERIFICATION_REPORT.md      # Submission checklist
 ├── 📄 pubspec.yaml
 └── 📄 README.md
 ```
 
 ---
-## 🗄️ Database Design
+
 ## 🗄️ Database Design
 
 ```
@@ -401,7 +372,6 @@ AI Chat Screen
     ├── Free-form Q&A
     └── Quick prompts: Foods · Hotels · Budget · Transport · Photos · Timing
 ```
----
 
 ---
 
@@ -433,17 +403,26 @@ AI Chat Screen
 
 ---
 
-## 📄 Project One Pager
+## 📋 Semester Project Submission
 
-<div align="center">
+**Repository:** [https://github.com/QaswarSarfrazcodes/Vista-Voyage-](https://github.com/QaswarSarfrazcodes/Vista-Voyage-)
 
-### 📥 Download Project Documentation
+| Task | Points | Submission Link |
+|:---|:---:|:---|
+| GitHub Public Repo | 2 | https://github.com/QaswarSarfrazcodes/Vista-Voyage- |
+| User Stories (.md) | 9 | [user_stories.md](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/user_stories.md) |
+| Signup Implementation | 4 | [signup_screen.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/screens/signup_screen.dart) |
+| Login Implementation | 4 | [login_screen.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/screens/login_screen.dart) |
+| Home Screen Implementation | 4 | [home_screen.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/screens/home_screen.dart) |
+| Detail Screen Implementation | 4 | [detail_screen.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/screens/detail_screen.dart) |
+| Local Storage Implementation | 4 | [supabase_data_service.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/services/supabase_data_service.dart) |
+| API Integration | 4 | [ai_service.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/services/ai_service.dart) |
+| Settings Menu Implementation | 4 | [settings_menu.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/screens/settings_menu.dart) |
+| Settings Screen Implementation | 4 | [settings_screen.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/screens/settings_screen.dart) |
+| Notifications Implementation | 4 | [notification_service.dart](https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/services/notification_service.dart) |
 
-[📄 View OnePager PDF](oneper/onepager.pdf)
+> 📸 **Screenshots** for the remaining 49 points are to be taken from the running app and placed in the `screenshots/` folder.
 
-</div>
-
----
 ---
 
 ## 🧪 Testing
@@ -464,18 +443,25 @@ flutter test --reporter expanded
 | **Supabase anon key** | Safe to expose — RLS enforces access control |
 | **Passwords** | Handled entirely by Supabase Auth |
 | **Sessions** | JWT refresh managed by Supabase automatically |
+| **API Keys** | Stored in `.env` file (gitignored) |
 
 ---
 
 ## 🛣️ Roadmap
 
-- [ ] 🗺️ Map view for all destinations
+- [x] 🔐 Authentication (Signup & Login)
+- [x] 🏠 Home screen with search
+- [x] 🗺️ Destination detail screen
+- [x] ❤️ Favorites with Supabase sync
+- [x] 🤖 AI Travel Assistant (Groq API)
+- [x] ⚙️ Settings menu & settings screen
+- [x] 🔔 Push notifications
+- [ ] 🗺️ Full interactive map view
 - [ ] 💾 Offline caching with Hive
 - [ ] ⭐ User reviews and ratings
 - [ ] ✈️ Flight & hotel booking integration
-- [ ] 🌙 Dark mode
+- [ ] 🌙 Dark mode (UI)
 - [ ] 🌐 Multi-language support
-- [ ] 📤 Share itineraries to social media
 
 ---
 
@@ -485,21 +471,15 @@ flutter test --reporter expanded
 
 <table>
 <tr>
-<td align="center" width="33%">
+<td align="center" width="50%">
 
 ### 👨‍💻 Qaswar Sarfraz
 **Lead Developer**
 
-Flutter Development · UI/UX Design · AI Integration
+Flutter Development · UI/UX Design · AI Integration · Backend
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/qaswar-sarfraz-051111313)
-
-</td>
-<td align="center" width="33%">
-
-
-
-Testing · Destination Data · Documentation
+[![GitHub](https://img.shields.io/badge/GitHub-QaswarSarfrazcodes-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/QaswarSarfrazcodes)
 
 </td>
 </tr>
@@ -526,6 +506,7 @@ git push origin feature/AmazingFeature
 - [Supabase](https://supabase.com) — Open source Firebase alternative
 - [Groq](https://groq.com) — Fast LLM inference API
 - [Meta AI](https://ai.meta.com) — Llama 3.3 70B model
+- [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications) — Push notifications
 - [Unsplash](https://unsplash.com) — Free travel photography
 - [Google Fonts](https://fonts.google.com) — Playfair Display & Nunito
 
@@ -539,12 +520,14 @@ MIT License — Copyright (c) 2025 Qaswar Sarfraz
 
 ---
 
+<div align="center">
+
 [![Flutter](https://img.shields.io/badge/Built_with-Flutter-02569B?style=flat-square&logo=flutter)](https://flutter.dev)
 [![Supabase](https://img.shields.io/badge/Powered_by-Supabase-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com)
 [![Groq](https://img.shields.io/badge/AI_by-Groq-F55036?style=flat-square)](https://groq.com)
 
 <br/>
 
-**⭐ Star this repo if you found it helpful...   Thank you!**
+**⭐ Star this repo if you found it helpful... Thank you!**
 
 </div>
