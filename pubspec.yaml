@@ -1,0 +1,68 @@
+name: vistavoyage
+description: "VistaVoyage — discover and plan your next adventure with AI."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── Supabase (replaces Firebase) ──────────────────────────────────────────
+  supabase_flutter: ^2.5.6
+
+  # ── HTTP for direct Grok API calls ────────────────────────────────────────
+  http: ^1.2.1
+
+  # ── Push Notifications ────────────────────────────────────────────────────
+  flutter_local_notifications: ^17.0.0
+  permission_handler: ^11.3.0
+
+  # ── Maps ───────────────────────────────────────────────────────────────
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # ── UI ────────────────────────────────────────────────────────────────────
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/logo.png
+    - assets/images/splash.jpg
+    - assets/images/login_bg.jpg
+    - assets/images/signup_bg.jpg
+    - assets/images/placeholder.png
+    - assets/images/empty_favorites.png
+    - assets/images/dest_paris.jpg
+    - assets/images/dest_tokyo.jpg
+    - assets/images/dest_santorini.jpg
+    - assets/images/dest_dubai.jpg
+    - assets/images/dest_bali.jpg
+    - assets/images/dest_newyork.jpg
+    - assets/images/dest_maldives.jpg
+    - assets/images/dest_rome.jpg
+    - assets/images/dest_capetown.jpg
+    - assets/images/dest_istanbul.jpg
+
+  fonts:
+    - family: PlayfairDisplay
+      fonts:
+        - asset: assets/fonts/PlayfairDisplay-Bold.ttf
+          weight: 700
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Nunito-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Nunito-Bold.ttf
+          weight: 700
