@@ -34,16 +34,16 @@
 ### 2. Figma UI Design Evidence (9 Points)
 
 * **Task 3: Figma Screens 1 – Core Screens (5 Points)**
-  * **Status:** ⚠️ `NEEDS FIGMA SCREENSHOT`
-  * **Required Filename:** `figma-evidence1.png` or `.jpg`
-  * **Content Needed:** Screenshot featuring 5 Figma screens: Login, Registration, Home, Detail, Favorites/Profile.
-  * **Action:** Take a screenshot from your Figma project and upload it.
+  * **Status:** ✅ `UPLOADED`
+  * **Filename:** `figma-evidence1.jpg`
+  * **Screens Included:** Login | Signup | Home | Detail | Favorites
+  * **GitHub Link:** https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/screenshots/figma-evidence1.jpg
 
 * **Task 4: Figma Screens 2 – Extended Features (4 Points)**
-  * **Status:** ⚠️ `NEEDS FIGMA SCREENSHOT`
-  * **Required Filename:** `figma-evidence2.png` or `.jpg`
-  * **Content Needed:** Screenshot featuring 4 Figma screens: External API Integration, Settings Menu, Settings Screen, Notifications Screen.
-  * **Action:** Take a screenshot from your Figma project and upload it.
+  * **Status:** ✅ `UPLOADED`
+  * **Filename:** `figma-evidence2.jpg`
+  * **Screens Included:** AI/API Chat | Settings Menu | Settings Screen | Notifications
+  * **GitHub Link:** https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/screenshots/figma-evidence2.jpg
 
 ---
 
@@ -188,8 +188,8 @@
 |:---:|:---|:---:|:---|
 | 1 | GitHub Public Repo | 2 | https://github.com/QaswarSarfrazcodes/Vista-Voyage- |
 | 2 | User Stories .md | 9 | https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/user_stories.md |
-| 3 | figma-evidence1 | 5 | ⚠️ Upload your Figma screenshot manually |
-| 4 | figma-evidence2 | 4 | ⚠️ Upload your Figma screenshot manually |
+| 3 | figma-evidence1 | 5 | https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/screenshots/figma-evidence1.jpg |
+| 4 | figma-evidence2 | 4 | https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/screenshots/figma-evidence2.jpg |
 | 5 | Signup Code | 4 | https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/lib/screens/signup_screen.dart |
 | 6 | signup_screen_evidence | 6 | https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/screenshots/signup_screen_evidence.jpg |
 | 7 | signup_error | 2 | https://github.com/QaswarSarfrazcodes/Vista-Voyage-/blob/main/screenshots/signup_error.jpg |
