@@ -1,10 +1,17 @@
 // lib/screens/home_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../l10n/gen/app_localizations.dart';
 import '../models/destination_model.dart';
 import '../services/supabase_service.dart';
 import '../services/supabase_data_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/app_toast.dart';
+import '../utils/result.dart';
 import '../widgets/destination_card.dart';
+import '../widgets/no_internet_screen.dart';
+import '../widgets/vista_logo.dart';
 import 'settings_menu.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,10 +24,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<DestinationModel> _all = [];
   List<DestinationModel> _filtered = [];
+  List<DestinationModel> _recommendations = [];
   bool _loading = true;
   String _query = '';
   String _category = 'All';
+  double _minRating = 0;
+  bool _bannerDismissed = false;
+  Timer? _searchDebounce;
   final _searchCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  int _page = 0;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+  bool _connectionError = false;
 
   static const _categories = ['All', 'City', 'Beach', 'Mountain', 'Historic', 'Nature'];
 
@@ -37,35 +53,111 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _load();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  Future<void> _loadRecommendations() async {
+    final recs = await SupabaseDataService().getRecommendations(_all);
+    if (mounted) setState(() => _recommendations = recs);
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchCtrl.dispose();
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
+  void _onScroll() {
+    if (_query.isNotEmpty || _loadingMore || !_hasMore) return;
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 300) {
+      _loadMore();
+    }
+  }
+
   Future<void> _load() async {
-    setState(() => _loading = true);
-    final result = await SupabaseDataService().getDestinationsByCategory(_category);
+    setState(() { _loading = true; _connectionError = false; });
+    _page = 0;
+    _hasMore = true;
+    final result = await SupabaseDataService().getDestinationsPage(0, category: _category);
+    switch (result) {
+      case Ok(value: final list):
+        setState(() {
+          _all = list;
+          _hasMore = list.length == SupabaseDataService.pageSize;
+          _applySearch();
+          _loading = false;
+        });
+        _loadRecommendations();
+      case Err():
+        setState(() { _connectionError = true; _loading = false; });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    setState(() => _loadingMore = true);
+    final nextPage = _page + 1;
+    final result = await SupabaseDataService().getDestinationsPage(nextPage, category: _category);
     setState(() {
-      _all = result;
-      _applySearch();
-      _loading = false;
+      switch (result) {
+        case Ok(value: final list):
+          if (list.isEmpty) {
+            _hasMore = false;
+          } else {
+            _page = nextPage;
+            _all.addAll(list);
+            _hasMore = list.length == SupabaseDataService.pageSize;
+            _applySearch();
+          }
+        case Err():
+          _hasMore = false; // stop trying further pages; pull-to-refresh retries
+      }
+      _loadingMore = false;
     });
   }
 
   void _applySearch() {
     final low = _query.toLowerCase();
     _filtered = _all.where((d) {
-      return d.name.toLowerCase().contains(low) || d.country.toLowerCase().contains(low);
+      final matchesQuery = d.name.toLowerCase().contains(low) || d.country.toLowerCase().contains(low);
+      return matchesQuery && d.rating >= _minRating;
     }).toList();
   }
 
+  void _showFilterSheet() {
+    showModalBottomSheet(context: context, isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setSheetState) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Filter Destinations', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 20),
+          Align(alignment: Alignment.centerLeft,
+            child: Text('Minimum Rating: ${_minRating.toStringAsFixed(1)}', style: const TextStyle(fontFamily: 'Nunito'))),
+          Slider(value: _minRating, min: 0, max: 5, divisions: 10,
+            activeColor: AppColors.primary,
+            onChanged: (v) => setSheetState(() => _minRating = v)),
+          const SizedBox(height: 12),
+          SizedBox(width: double.infinity, child: ElevatedButton(
+            onPressed: () {
+              setState(_applySearch);
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            child: const Text('Apply Filters', style: TextStyle(fontFamily: 'Nunito')))),
+        ]),
+      )));
+  }
+
   void _onSearch(String q) {
-    setState(() {
-      _query = q;
-      _applySearch();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _query = q;
+        _applySearch();
+      });
     });
   }
 
@@ -79,11 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) Navigator.pushReplacementNamed(context, '/login');
   }
 
-  String get _greeting {
+  String _greeting(AppLocalizations l10n) {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good Morning';
-    if (h < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (h < 12) return l10n.goodMorning;
+    if (h < 17) return l10n.goodAfternoon;
+    return l10n.goodEvening;
   }
 
   String get _userName {
@@ -96,6 +188,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_connectionError && _all.isEmpty) {
+      return NoInternetScreen(onRetry: _load);
+    }
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.surface,
       extendBodyBehindAppBar: true,
@@ -103,30 +199,17 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'VistaVoyage ✈',
-          style: TextStyle(
-            fontFamily: 'PlayfairDisplay',
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            letterSpacing: 0.2,
-          ),
-        ),
+        title: const VistaWordmark(),
         actions: [
           _AppBarIconButton(
-            icon: Icons.map_outlined,
-            tooltip: 'Map',
-            onTap: () => Navigator.pushNamed(context, '/map', arguments: _all),
+            icon: Icons.tune,
+            tooltip: 'Filters',
+            onTap: _showFilterSheet,
           ),
           _AppBarIconButton(
             icon: Icons.settings_outlined,
             tooltip: 'Settings',
             onTap: () => showSettingsMenu(context),
-          ),
-          _AppBarIconButton(
-            icon: Icons.favorite_border_rounded,
-            tooltip: 'Favorites',
-            onTap: () => Navigator.pushNamed(context, '/favorites'),
           ),
           _AppBarIconButton(
             icon: Icons.logout_rounded,
@@ -139,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: _load,
-        child: CustomScrollView(slivers: [
+        child: CustomScrollView(controller: _scrollCtrl, slivers: [
           SliverToBoxAdapter(
             child: ClipRRect(
               borderRadius: const BorderRadius.only(
@@ -232,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(_greeting,
+                                Text(_greeting(l10n),
                                     style: const TextStyle(
                                         color: Colors.white70, fontSize: 12, fontFamily: 'Nunito')),
                                 Text(
@@ -247,9 +330,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ]),
                           const SizedBox(height: 18),
-                          const Text(
-                            'Explore Destinations!',
-                            style: TextStyle(
+                          Text(
+                            l10n.exploreDestinations,
+                            style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'Nunito',
@@ -259,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Find your next unforgettable trip',
+                            l10n.findNextTrip,
                             style: TextStyle(
                               fontSize: 13,
                               fontFamily: 'Nunito',
@@ -286,14 +369,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: const TextStyle(
                                   fontFamily: 'Nunito', fontSize: 14, color: AppColors.charcoal),
                               decoration: InputDecoration(
-                                hintText: 'Search destinations or countries…',
+                                hintText: l10n.searchHint,
                                 hintStyle: const TextStyle(
                                     color: AppColors.gray, fontSize: 14, fontFamily: 'Nunito'),
                                 prefixIcon: Container(
                                   margin: const EdgeInsets.all(9),
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
+                                    gradient: const LinearGradient(
                                       colors: [AppColors.primary, AppColors.primaryDark],
                                     ),
                                     borderRadius: BorderRadius.circular(14),
@@ -322,9 +405,43 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          if (!_bannerDismissed && SupabaseService.currentUser?.emailConfirmedAt == null)
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.mark_email_unread_outlined, color: AppColors.deepNavy, size: 20),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text('Please verify your email address.',
+                      style: TextStyle(fontFamily: 'Nunito', fontSize: 12, color: AppColors.charcoal)),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final email = SupabaseService.currentUser?.email;
+                      if (email != null) await SupabaseService.resendConfirmationEmail(email);
+                      if (mounted) {
+                        AppToast.show(context, 'Confirmation email sent!', type: ToastType.success);
+                      }
+                    },
+                    child: const Text('Resend', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.bold)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: AppColors.gray),
+                    onPressed: () => setState(() => _bannerDismissed = true),
+                  ),
+                ]),
+              ),
+            ),
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 52,
+              height: 64,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -345,6 +462,69 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          if (_query.isEmpty && _recommendations.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                child: Row(children: [
+                  Container(
+                    width: 4,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [AppColors.gold, AppColors.gold.withValues(alpha: 0.7)]),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(l10n.recommendedForYou,
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, fontFamily: 'Nunito', color: AppColors.charcoal)),
+                ]),
+              ),
+            ),
+          if (_query.isEmpty && _recommendations.isNotEmpty)
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 210,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  itemCount: _recommendations.length,
+                  itemBuilder: (ctx, i) {
+                    final dest = _recommendations[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: SizedBox(
+                        width: 160,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/detail', arguments: dest),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Stack(fit: StackFit.expand, children: [
+                              if (dest.imageUrl.isEmpty)
+                                Container(color: AppColors.cardTint,
+                                  child: const Icon(Icons.image_outlined, color: AppColors.primary))
+                              else
+                                CachedNetworkImage(imageUrl: dest.imageUrl, fit: BoxFit.cover,
+                                  memCacheWidth: 320,
+                                  fadeInDuration: const Duration(milliseconds: 150),
+                                  placeholder: (_, __) => Container(color: AppColors.cardTint),
+                                  errorWidget: (_, __, ___) => Container(color: AppColors.cardTint,
+                                    child: const Icon(Icons.image_outlined, color: AppColors.primary))),
+                              DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(
+                                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.55)]))),
+                              Positioned(left: 10, right: 10, bottom: 10,
+                                child: Text(dest.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Nunito', fontSize: 14))),
+                            ]),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
@@ -357,7 +537,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 4,
                         height: 18,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
+                          gradient: const LinearGradient(
                             colors: [AppColors.primary, AppColors.primaryDark],
                           ),
                           borderRadius: BorderRadius.circular(4),
@@ -365,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        _query.isEmpty ? 'Popular Destinations' : 'Results (${_filtered.length})',
+                        _query.isEmpty ? l10n.popularDestinations : '${l10n.results} (${_filtered.length})',
                         style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
@@ -382,7 +562,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '${_all.length} places',
+                        '${_all.length} ${l10n.places}',
                         style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.primary,
@@ -415,7 +595,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      _query.isEmpty ? 'No destinations found.\nPull to refresh.' : 'No results for "$_query"',
+                      _query.isEmpty ? l10n.noDestinationsFound : l10n.noResultsFor(_query),
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 15, color: AppColors.gray, fontFamily: 'Nunito'),
                     ),
@@ -426,14 +606,40 @@ class _HomeScreenState extends State<HomeScreen> {
           else
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => DestinationCard(
-                    destination: _filtered[i],
-                    onTap: () => Navigator.pushNamed(context, '/detail', arguments: _filtered[i]),
-                  ),
-                  childCount: _filtered.length,
-                ),
+              sliver: SliverLayoutBuilder(
+                builder: (ctx, constraints) {
+                  // Tablets/landscape get a 2-column grid; phones keep the single list.
+                  final isWide = constraints.crossAxisExtent >= 600;
+                  if (!isWide) {
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (ctx, i) => DestinationCard(
+                          destination: _filtered[i],
+                          onTap: () => Navigator.pushNamed(context, '/detail', arguments: _filtered[i]),
+                        ),
+                        childCount: _filtered.length,
+                      ),
+                    );
+                  }
+                  return SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 4, childAspectRatio: 0.62),
+                    delegate: SliverChildBuilderDelegate(
+                          (ctx, i) => DestinationCard(
+                        destination: _filtered[i],
+                        onTap: () => Navigator.pushNamed(context, '/detail', arguments: _filtered[i]),
+                      ),
+                      childCount: _filtered.length,
+                    ),
+                  );
+                },
+              ),
+            ),
+          if (_loadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2)),
               ),
             ),
         ]),
@@ -500,7 +706,7 @@ class _CategoryPill extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             gradient: selected
-                ? LinearGradient(colors: [AppColors.primary, AppColors.primaryDark])
+                ? const LinearGradient(colors: [AppColors.primary, AppColors.primaryDark])
                 : null,
             color: selected ? null : Colors.white,
             borderRadius: BorderRadius.circular(24),

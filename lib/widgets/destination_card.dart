@@ -1,6 +1,8 @@
 // lib/widgets/destination_card.dart
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/destination_model.dart';
+import '../theme/app_colors.dart';
 
 class DestinationCard extends StatefulWidget {
   final DestinationModel destination;
@@ -13,11 +15,11 @@ class DestinationCard extends StatefulWidget {
 }
 
 class _DestinationCardState extends State<DestinationCard> {
-  static const _amber    = Color(0xFFF5A623);
-  static const _blue     = Color(0xFF3B82F6);
-  static const _blueDark = Color(0xFF2563EB);
+  static const _amber    = AppColors.gold;
+  static const _blue     = AppColors.primary;
+  static const _blueDark = AppColors.primaryDark;
   static const _green    = Color(0xFF4CAF50);
-  static const _gray     = Color(0xFF9E9E9E);
+  static const _gray     = AppColors.gray;
 
   bool _pressed = false;
 
@@ -44,10 +46,10 @@ class _DestinationCardState extends State<DestinationCard> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.black.withOpacity(0.04)),
+              border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(_pressed ? 0.06 : 0.12),
+                  color: Colors.black.withValues(alpha: _pressed ? 0.06 : 0.12),
                   blurRadius: _pressed ? 12 : 20,
                   offset: Offset(0, _pressed ? 4 : 8),
                 ),
@@ -74,7 +76,7 @@ class _DestinationCardState extends State<DestinationCard> {
                               end: Alignment.bottomCenter,
                               colors: [
                                 Colors.transparent,
-                                Colors.black.withOpacity(0.32),
+                                Colors.black.withValues(alpha: 0.32),
                               ],
                             ),
                           ),
@@ -87,9 +89,9 @@ class _DestinationCardState extends State<DestinationCard> {
                         child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.55),
+                              color: Colors.black.withValues(alpha: 0.55),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.white.withOpacity(0.18)),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
                             ),
                             child: Row(mainAxisSize: MainAxisSize.min, children: [
                               const Icon(Icons.star_rounded, color: _amber, size: 15),
@@ -108,7 +110,7 @@ class _DestinationCardState extends State<DestinationCard> {
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _blue.withOpacity(0.4),
+                                  color: _blue.withValues(alpha: 0.4),
                                   blurRadius: 8,
                                   offset: const Offset(0, 3),
                                 ),
@@ -159,9 +161,9 @@ class _DestinationCardState extends State<DestinationCard> {
                               Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF4FF),
+                                    color: AppColors.cardTint,
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: const Color(0xFFDBEAFE)),
+                                    border: Border.all(color: AppColors.divider),
                                   ),
                                   child: Text(tag, style: const TextStyle(
                                       fontSize: 11, fontFamily: 'Nunito',
@@ -196,7 +198,7 @@ class _DestinationCardState extends State<DestinationCard> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: _blue.withOpacity(0.35),
+                              color: _blue.withValues(alpha: 0.35),
                               blurRadius: 12,
                               offset: const Offset(0, 5),
                             ),
@@ -235,19 +237,21 @@ class _DestinationCardState extends State<DestinationCard> {
           height: 210, width: double.infinity, fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => _placeholder());
     }
-    return Image.network(destination.imageUrl,
+    return CachedNetworkImage(
+        imageUrl: destination.imageUrl,
         height: 210, width: double.infinity, fit: BoxFit.cover,
-        loadingBuilder: (_, child, progress) => progress == null ? child
-            : Container(height: 210, color: const Color(0xFFDBEAFE),
+        memCacheWidth: 480,
+        fadeInDuration: const Duration(milliseconds: 150),
+        placeholder: (_, __) => Container(height: 210, color: AppColors.cardTint,
             child: const Center(child: CircularProgressIndicator(
-                color: Color(0xFF3B82F6), strokeWidth: 2))),
-        errorBuilder: (_, __, ___) => _placeholder());
+                color: AppColors.primary, strokeWidth: 2))),
+        errorWidget: (_, __, ___) => _placeholder());
   }
 
   Widget _placeholder() => Container(
-      height: 210, color: const Color(0xFFDBEAFE),
+      height: 210, color: AppColors.cardTint,
       child: const Center(child: Icon(Icons.image_outlined,
-          size: 48, color: Color(0xFF3B82F6))));
+          size: 48, color: AppColors.primary)));
 }
 
 /// Small pill used for the best-time / budget metadata row.
@@ -264,7 +268,7 @@ class _InfoChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -276,7 +280,7 @@ class _InfoChip extends StatelessWidget {
               child: Text(
                 label,
                 style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF2D2D2D), fontFamily: 'Nunito', fontWeight: FontWeight.w600),
+                    fontSize: 11, color: AppColors.charcoal, fontFamily: 'Nunito', fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

@@ -147,7 +147,7 @@ class _AiScreenState extends State<AiScreen> {
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, -2))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, -2))],
           ),
           padding: EdgeInsets.only(left: 16, right: 12, top: 10, bottom: MediaQuery.of(context).viewInsets.bottom + 10),
           child: Row(children: [
@@ -215,7 +215,7 @@ class _MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isAi ? Colors.white : AppColors.primary,
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(isAi ? 4 : 18), topRight: Radius.circular(isAi ? 18 : 4), bottomLeft: const Radius.circular(18), bottomRight: const Radius.circular(18)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6, offset: const Offset(0, 2))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2))],
               ),
               child: Text(text, style: TextStyle(fontSize: 14, height: 1.55, fontFamily: 'Nunito', color: isAi ? AppColors.charcoal : Colors.white)),
             ),
@@ -263,7 +263,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6, offset: const Offset(0, 2))]),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2))]),
           child: FadeTransition(
             opacity: _anim,
             child: Row(children: List.generate(3, (i) => Padding(padding: EdgeInsets.only(left: i > 0 ? 4 : 0), child: const CircleAvatar(radius: 4, backgroundColor: AppColors.gray)))),

@@ -1,17 +1,15 @@
 // lib/services/supabase_service.dart
 // Replaces Firebase Auth + Firestore with Supabase (free tier, no credit card)
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
-  static const _url    = 'https://qieqfinzunytmdulyyko.supabase.co';
-  static const _anonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
-      '.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpZXFmaW56dW55dG1kdWx5eWtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3Nzg1MTAsImV4cCI6MjA5MzM1NDUxMH0'
-      '.lwieWngZ1DoBueCwHAzqoNvnxKpg0amH-XDrxGKkkxU';
-
   static Future<void> initialize() async {
-    await Supabase.initialize(url: _url, anonKey: _anonKey);
+    await Supabase.initialize(
+      url: dotenv.env['SUPABASE_URL']!,
+      anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    );
   }
 
   static SupabaseClient get client => Supabase.instance.client;
@@ -38,6 +36,14 @@ class SupabaseService {
 
   static Future<void> signOut() async {
     await client.auth.signOut();
+  }
+
+  static Future<void> updatePassword(String newPassword) async {
+    await client.auth.updateUser(UserAttributes(password: newPassword));
+  }
+
+  static Future<void> resendConfirmationEmail(String email) async {
+    await client.auth.resend(type: OtpType.signup, email: email);
   }
 
   static Stream<AuthState> get authStateChanges =>

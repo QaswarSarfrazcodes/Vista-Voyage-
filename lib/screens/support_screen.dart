@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
+import '../utils/app_toast.dart';
 
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
+
+  static Future<void> _emailSupport(BuildContext context) async {
+    final uri = Uri(scheme: 'mailto', path: 'support@tripline.app', query: 'subject=Tripline Support Request');
+    final launched = await launchUrl(uri);
+    if (!launched && context.mounted) {
+      AppToast.show(context, 'No email app found. Contact support@tripline.app directly.', type: ToastType.error);
+    }
+  }
 
   static const _faqs = [
     {
@@ -10,7 +20,7 @@ class SupportScreen extends StatelessWidget {
       'a': 'Tap the heart icon on any destination\'s detail screen. It will appear in your Favorites tab instantly.'
     },
     {
-      'q': 'Can I use VistaVoyage offline?',
+      'q': 'Can I use Tripline offline?',
       'a': 'Browsing requires internet to fetch destinations from our database, but previously viewed favorites remain visible if cached.'
     },
     {
@@ -54,7 +64,7 @@ class SupportScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
                 ),
                 child: ExpansionTile(
                   title: Text(
@@ -97,7 +107,7 @@ class SupportScreen extends StatelessWidget {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.email_outlined, size: 18),
                     label: const Text('Email Support', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.bold)),
-                    onPressed: () {},
+                    onPressed: () => _emailSupport(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,

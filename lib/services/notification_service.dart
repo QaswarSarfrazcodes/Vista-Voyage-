@@ -9,8 +9,8 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static const _channelId    = 'vistavoyage_channel';
-  static const _channelName  = 'VistaVoyage';
+  static const _channelId    = 'tripline_channel';
+  static const _channelName  = 'Tripline';
   static const _channelDesc  = 'Travel reminders and updates';
 
   // ── Initialize ────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ class NotificationService {
     );
     await _plugin.show(
       0,
-      '✈️ VistaVoyage',
+      '✈️ Tripline',
       'Your next adventure awaits! Check out today\'s top picks.',
       details,
     );
@@ -68,7 +68,7 @@ class NotificationService {
     await _plugin.show(
       1,
       '🌍 Time to Explore!',
-      'New destinations are waiting for you on VistaVoyage.',
+      'New destinations are waiting for you on Tripline.',
       const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId, _channelName,

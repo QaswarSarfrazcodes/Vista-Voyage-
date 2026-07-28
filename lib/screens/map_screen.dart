@@ -1,18 +1,38 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import '../models/destination_model.dart';
 import '../theme/app_colors.dart';
 
-class MapScreen extends StatefulWidget {
+/// Pushed-route wrapper — reads the destination list from route arguments.
+class MapScreen extends StatelessWidget {
   const MapScreen({super.key});
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
+  Widget build(BuildContext context) {
+    final destinations = ModalRoute.of(context)!.settings.arguments as List<DestinationModel>;
+    return Scaffold(
+      backgroundColor: AppColors.primaryDark,
+      body: MapScreenBody(destinations: destinations),
+    );
+  }
 }
 
-class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+/// Reusable map body — used both by the pushed [MapScreen] route and the
+/// persistent Map tab inside [MainShell] (via MapScreenTab).
+class MapScreenBody extends StatefulWidget {
+  final List<DestinationModel> destinations;
+  final bool showBackButton;
+
+  const MapScreenBody({super.key, required this.destinations, this.showBackButton = true});
+
+  @override
+  State<MapScreenBody> createState() => _MapScreenBodyState();
+}
+
+class _MapScreenBodyState extends State<MapScreenBody> with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   DestinationModel? _selectedDestination;
   final PageController _pageController = PageController(viewportFraction: 0.85);
@@ -32,7 +52,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final destinations = ModalRoute.of(context)!.settings.arguments as List<DestinationModel>;
+    final destinations = widget.destinations;
     final withCoords = destinations
         .where((d) => d.latitude != null && d.longitude != null)
         .toList();
@@ -41,9 +61,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         ? LatLng(withCoords.first.latitude!, withCoords.first.longitude!)
         : const LatLng(30.3753, 69.3451); // Default Pakistan Center
 
-    return Scaffold(
-      backgroundColor: AppColors.primaryDark,
-      body: Stack(
+    return Stack(
         children: [
           // 1. Core Map Layer
           FlutterMap(
@@ -65,7 +83,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             children: [
               TileLayer(
                 urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                userAgentPackageName: 'com.vistavoyage.app',
+                userAgentPackageName: 'com.tripline.app',
               ),
               MarkerLayer(
                 markers: withCoords.map((d) {
@@ -151,11 +169,13 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   ),
                   child: Row(
                     children: [
-                      _CircleIconButton(
-                        icon: Icons.arrow_back_rounded,
-                        onTap: () => Navigator.pop(context),
-                      ),
-                      const SizedBox(width: 14),
+                      if (widget.showBackButton) ...[
+                        _CircleIconButton(
+                          icon: Icons.arrow_back_rounded,
+                          onTap: () => Navigator.pop(context),
+                        ),
+                        const SizedBox(width: 14),
+                      ],
                       const Expanded(
                         child: Text(
                           'Explore Destinations',
@@ -186,35 +206,32 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           ),
 
           // 4. Floating premium zoom controls
+          // Solid container instead of BackdropFilter — a live blur here on
+          // top of an already-blurred app bar was pure per-frame GPU cost
+          // for a corner control the user glances at, not reads through.
           Positioned(
             right: 16,
             bottom: _selectedDestination != null ? 172 : 32,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 14,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _CircleIconButton(icon: Icons.add_rounded, onTap: () => _zoomBy(1)),
-                      Divider(height: 1, color: AppColors.primaryDark.withValues(alpha: 0.08)),
-                      _CircleIconButton(icon: Icons.remove_rounded, onTap: () => _zoomBy(-1)),
-                    ],
-                  ),
-                ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _CircleIconButton(icon: Icons.add_rounded, onTap: () => _zoomBy(1)),
+                  Divider(height: 1, color: AppColors.primaryDark.withValues(alpha: 0.08)),
+                  _CircleIconButton(icon: Icons.remove_rounded, onTap: () => _zoomBy(-1)),
+                ],
               ),
             ),
           ),
@@ -248,7 +265,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             ),
           ),
         ],
-      ),
     );
   }
 }
@@ -290,14 +306,45 @@ class _CircleIconButton extends StatelessWidget {
 }
 
 /// Custom teardrop map pin with a glowing halo when selected.
-class _PremiumMarker extends StatelessWidget {
+class _PremiumMarker extends StatefulWidget {
   final DestinationModel destination;
   final bool isSelected;
 
   const _PremiumMarker({required this.destination, required this.isSelected});
 
   @override
+  State<_PremiumMarker> createState() => _PremiumMarkerState();
+}
+
+class _PremiumMarkerState extends State<_PremiumMarker> with SingleTickerProviderStateMixin {
+  // Explicit controller instead of TweenAnimationBuilder — plays exactly
+  // once per selection event via didUpdateWidget below, rather than relying
+  // on implicit widget-reconciliation timing to decide when it (re)plays.
+  late final AnimationController _pulseCtrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isSelected) _pulseCtrl.forward(from: 0);
+  }
+
+  @override
+  void didUpdateWidget(covariant _PremiumMarker old) {
+    super.didUpdateWidget(old);
+    if (widget.isSelected && !old.isSelected) _pulseCtrl.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final destination = widget.destination;
+    final isSelected = widget.isSelected;
     final double size = isSelected ? 62 : 46;
 
     return AnimatedScale(
@@ -311,11 +358,10 @@ class _PremiumMarker extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               if (isSelected)
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.6, end: 1.0),
-                  duration: const Duration(milliseconds: 900),
-                  curve: Curves.easeOut,
-                  builder: (context, value, child) {
+                AnimatedBuilder(
+                  animation: _pulseCtrl,
+                  builder: (context, child) {
+                    final value = _pulseCtrl.value;
                     return Opacity(
                       opacity: (1.0 - value) * 0.5 + 0.1,
                       child: Container(
@@ -354,10 +400,13 @@ class _PremiumMarker extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(100),
-                  child: Image.network(
-                    destination.imageUrl,
+                  child: CachedNetworkImage(
+                    imageUrl: destination.imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
+                    memCacheWidth: 140,
+                    fadeInDuration: const Duration(milliseconds: 120),
+                    placeholder: (context, url) => Container(color: AppColors.primaryDark),
+                    errorWidget: (context, url, error) => Container(
                       color: AppColors.primaryDark,
                       child: const Icon(Icons.location_on, color: Colors.white, size: 20),
                     ),
@@ -412,15 +461,14 @@ class _DestinationPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(26),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
+    // Solid container instead of BackdropFilter — this card animates in on
+    // every marker tap, so a live blur here was a per-frame GPU cost paid
+    // on top of the map's own tile rendering every single time it appeared.
+    return Container(
           height: 132,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.92),
+            color: Colors.white.withValues(alpha: 0.96),
             borderRadius: BorderRadius.circular(26),
             border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 1.2),
             boxShadow: [
@@ -440,11 +488,14 @@ class _DestinationPreviewCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.passthrough,
                     children: [
-                      Image.network(
-                        destination.imageUrl,
+                      CachedNetworkImage(
+                        imageUrl: destination.imageUrl,
                         width: 104,
                         height: 108,
                         fit: BoxFit.cover,
+                        memCacheWidth: 220,
+                        fadeInDuration: const Duration(milliseconds: 120),
+                        placeholder: (context, url) => Container(color: AppColors.primaryDark.withValues(alpha: 0.1)),
                       ),
                       Positioned.fill(
                         child: DecoratedBox(
@@ -551,8 +602,6 @@ class _DestinationPreviewCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
   }
 }

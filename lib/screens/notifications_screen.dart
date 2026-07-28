@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/notification_service.dart';
+import '../utils/app_toast.dart';
+import '../theme/app_colors.dart';
 
 /// VistaVoyage — Notifications Screen
 /// Covers Task 26 (notifications file link), Task 27 (configure evidence),
@@ -22,12 +24,12 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  static const Color darkBlue = Color(0xFF2563EB);
-  static const Color primaryBlue = Color(0xFF3B82F6);
-  static const Color amber = Color(0xFFF5A623);
-  static const Color charcoal = Color(0xFF2D2D2D);
-  static const Color lightGray = Color(0xFF9E9E9E);
-  static const Color surfaceBg = Color(0xFFF9FAFB);
+  static const Color darkBlue = AppColors.primaryDark;
+  static const Color primaryBlue = AppColors.primary;
+  static const Color amber = AppColors.gold;
+  static const Color charcoal = AppColors.charcoal;
+  static const Color lightGray = AppColors.gray;
+  static const Color surfaceBg = AppColors.surface;
 
   bool _permissionGranted = false;
   bool _sending = false;
@@ -41,7 +43,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     ),
     _NotificationItem(
       title: 'New Destination Added',
-      body: 'Kyoto, Japan just joined the VistaVoyage collection.',
+      body: 'Kyoto, Japan just joined the Tripline collection.',
       time: '1d ago',
       unread: true,
     ),
@@ -74,16 +76,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     await NotificationService.sendTestNotification();
     if (mounted) {
       setState(() => _sending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Test notification sent!',
-            style: TextStyle(fontFamily: 'Nunito', color: Colors.white),
-          ),
-          backgroundColor: primaryBlue,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.show(context, 'Test notification sent!', type: ToastType.success);
     }
   }
 
@@ -165,7 +158,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -176,7 +169,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: amber.withOpacity(0.15),
+              color: amber.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.notifications_active, color: amber),
@@ -235,7 +228,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

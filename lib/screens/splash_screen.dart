@@ -1,6 +1,9 @@
 // lib/screens/splash_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
+import '../theme/app_colors.dart';
+import '../widgets/vista_logo.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,13 +26,49 @@ class _SplashScreenState extends State<SplashScreen>
     _scale = Tween<double>(begin: 0.8, end: 1.0)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack));
     _ctrl.forward();
-    Future.delayed(const Duration(milliseconds: 2800), _navigate);
+
+    // Returning users with an active session skip the artificial splash
+    // delay — new/logged-out users still see the full branded animation.
+    Duration delay = const Duration(milliseconds: 2800);
+    try {
+      if (SupabaseService.currentUser != null) {
+        delay = const Duration(milliseconds: 600);
+      }
+    } catch (e) {
+      debugPrint('SplashScreen auth check error in initState: $e');
+    }
+    Future.delayed(delay, _navigate);
   }
 
-  void _navigate() {
+  void _navigate() async {
     if (!mounted) return;
-    final user = SupabaseService.currentUser;
-    Navigator.pushReplacementNamed(context, user != null ? '/home' : '/login');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final seenOnboarding = prefs.getBool('seen_onboarding') ?? false;
+      
+      dynamic user;
+      try {
+        user = SupabaseService.currentUser;
+      } catch (e) {
+        debugPrint('SplashScreen currentUser error: $e');
+      }
+
+      if (!mounted) return;
+      if (!seenOnboarding) {
+        Navigator.pushReplacementNamed(context, '/onboarding');
+        return;
+      }
+      if (user == null) {
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+      Navigator.pushReplacementNamed(context, '/main');
+    } catch (e) {
+      debugPrint('SplashScreen navigate error: $e');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
   }
 
   @override
@@ -44,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFF0F2044), Color(0xFF1E3A5F)],
+              colors: AppColors.darkGradient,
             ),
           ),
         ),
@@ -52,18 +91,9 @@ class _SplashScreenState extends State<SplashScreen>
           child: ScaleTransition(scale: _scale,
             child: Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center, children: [
-              Container(width: 120, height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.5),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 24)]),
-                child: ClipRRect(borderRadius: BorderRadius.circular(30),
-                  child: Image.asset('assets/images/logo.png', fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.flight_takeoff, size: 60, color: Colors.white)))),
+              const VistaLogo(size: 96),
               const SizedBox(height: 28),
-              const Text('VistaVoyage', style: TextStyle(
+              const Text('Tripline', style: TextStyle(
                 fontSize: 40, fontWeight: FontWeight.bold,
                 fontFamily: 'PlayfairDisplay', color: Colors.white, letterSpacing: 1.5,
                 shadows: [Shadow(color: Colors.black45, blurRadius: 12, offset: Offset(0, 4))])),
@@ -71,9 +101,9 @@ class _SplashScreenState extends State<SplashScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: AppColors.gold.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.3))),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.5))),
                 child: const Text('Your World. Your Way.', style: TextStyle(
                   fontSize: 14, color: Colors.white, fontFamily: 'Nunito',
                   letterSpacing: 1.0, fontWeight: FontWeight.w600))),
@@ -85,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: CircularProgressIndicator(color: Colors.white70, strokeWidth: 2)),
               const SizedBox(height: 12),
               Text('Discovering the world for you…',
-                style: TextStyle(color: Colors.white.withOpacity(0.7),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7),
                   fontSize: 12, fontFamily: 'Nunito')),
             ]))),
       ]));

@@ -43,7 +43,12 @@ class DestinationModel {
       country: map['country'] as String? ?? '',
       city: map['city'] as String? ?? '',
       category: map['category'] as String? ?? 'City',
-      imageUrl: map['image_url'] as String? ?? map['imageUrl'] as String? ?? '',
+      imageUrl: (map['image_url'] as String? ?? map['imageUrl'] as String?)?.trim().isNotEmpty == true
+          ? (map['image_url'] as String? ?? map['imageUrl'] as String?)!
+          // Verified, permanent "no photo available" placeholder — guards
+          // against a future null/empty image_url causing a broken-image
+          // flash even after the data was backfilled.
+          : 'https://images.pexels.com/photos/1591373/pexels-photo-1591373.jpeg?auto=compress&cs=tinysrgb&w=800',
       isAsset: map['isAsset'] as bool? ?? false,
       description: map['description'] as String? ?? '',
       rating: (map['rating'] as num?)?.toDouble() ?? 0.0,

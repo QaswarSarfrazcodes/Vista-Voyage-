@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/login_guard.dart';
 import '../services/supabase_service.dart';
+import '../theme/app_colors.dart';
+import '../utils/app_toast.dart';
+import '../widgets/vista_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,8 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   bool _obscure = true;
   String? _error;
-
-  static const _blue = Color(0xFF3B82F6);
 
   @override
   void dispose() {
@@ -33,6 +35,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    if (await LoginGuard.isLockedOut()) {
+      final secs = await LoginGuard.remainingLockoutSeconds();
+      setState(() => _error = 'Too many failed attempts. Try again in ${secs}s.');
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _loading = true;
@@ -44,8 +51,10 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailCtrl.text.trim(),
         _passwordCtrl.text,
       );
-      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+      await LoginGuard.resetOnSuccess();
+      if (mounted) Navigator.pushReplacementNamed(context, '/main');
     } on AuthException catch (e) {
+      await LoginGuard.recordFailedAttempt();
       setState(() {
         _error = _friendlyError(e.message);
       });
@@ -56,6 +65,49 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _forgotPassword() {
+    final ctrl = TextEditingController(text: _emailCtrl.text.trim());
+    bool sending = false;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Reset Password', style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.bold)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Enter your email and we\'ll send you a password reset link.',
+            style: TextStyle(fontFamily: 'Nunito', fontSize: 13, color: AppColors.gray)),
+          const SizedBox(height: 16),
+          TextField(controller: ctrl, keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: sending ? null : () async {
+              if (ctrl.text.trim().isEmpty || !ctrl.text.contains('@')) return;
+              setDialogState(() => sending = true);
+              try {
+                await SupabaseService.client.auth.resetPasswordForEmail(ctrl.text.trim());
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  AppToast.show(context, 'Reset link sent! Check your email.', type: ToastType.success);
+                }
+              } catch (_) {
+                setDialogState(() => sending = false);
+                if (ctx.mounted) {
+                  AppToast.show(ctx, 'Could not send reset link. Try again.', type: ToastType.error);
+                }
+              }
+            },
+            child: sending
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Send Link'),
+          ),
+        ],
+      )),
+    );
   }
 
   @override
@@ -69,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF0F2044), Color(0xFF1E3A5F)],
+                colors: AppColors.darkGradient,
               ),
             ),
           ),
@@ -81,25 +133,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 24),
+                    const Center(child: VistaLogo(size: 64)),
+                    const SizedBox(height: 24),
                     const Text(
                       'Welcome Back',
                       style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
+                        fontFamily: 'PlayfairDisplay',
                         color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Sign in to explore amazing destinations',
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(color: Colors.white70, fontFamily: 'Nunito'),
                     ),
                     const SizedBox(height: 44),
 
                     TextFormField(
                       controller: _emailCtrl,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white, fontFamily: 'Nunito'),
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return 'Email required';
                         if (!v.contains('@')) return 'Enter valid email';
@@ -113,7 +170,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _passwordCtrl,
                       obscureText: _obscure,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white, fontFamily: 'Nunito'),
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _loading ? null : _login(),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Password required';
                         return null;
@@ -133,29 +192,38 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _forgotPassword,
+                        child: const Text('Forgot Password?', style: TextStyle(color: AppColors.gold, fontFamily: 'Nunito')),
+                      ),
+                    ),
+
                     if (_error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      const SizedBox(height: 4),
+                      Text(_error!, style: const TextStyle(color: Colors.red, fontFamily: 'Nunito')),
                     ],
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 12),
 
-                    // ✅ FIXED BUTTON
                     SizedBox(
                       height: 54,
                       child: ElevatedButton(
                         onPressed: _loading ? null : _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _blue,
+                          backgroundColor: AppColors.gold,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(color: AppColors.deepNavy)
                             : const Text(
                           'Sign In',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.deepNavy,
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
+                            fontFamily: 'Nunito',
                           ),
                         ),
                       ),
@@ -169,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                       child: const Text(
                         'Create New Account',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: Colors.white, fontFamily: 'Nunito'),
                       ),
                     ),
                   ],
@@ -185,11 +253,11 @@ class _LoginScreenState extends State<LoginScreen> {
   InputDecoration _fieldDeco(String label, IconData icon, {Widget? suffix}) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white60),
+      labelStyle: const TextStyle(color: Colors.white60, fontFamily: 'Nunito'),
       prefixIcon: Icon(icon, color: Colors.white54),
       suffixIcon: suffix,
       filled: true,
-      fillColor: Colors.white.withOpacity(0.12),
+      fillColor: Colors.white.withValues(alpha: 0.12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
